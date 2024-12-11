@@ -1,8 +1,12 @@
+import asyncio
 import random
 from typing import Optional, Union
 
 import aiofiles
 import ujson
+from loguru import logger
+
+from config import DELAY_BETWEEN_TX
 
 
 class Utils:
@@ -37,4 +41,55 @@ class Utils:
         name, symbol = random.choice(paired_list)
     
         return name.strip(), symbol.strip()
+
+    @staticmethod
+    async def execute_with_delay(transaction, wallet_address: str, account_index: int):
+        delay = random.randint(DELAY_BETWEEN_TX[0], DELAY_BETWEEN_TX[1])
+        logger.info(f'Account {account_index+1} | {wallet_address} | Waiting {delay} seconds before transaction...')
+        
+        await asyncio.sleep(delay)
+        
+        logger.info(f'Account {account_index+1} | {wallet_address} | Delay completed. Starting next transaction...')
+        return await transaction
     
+    @staticmethod
+    def round_to_significant_digits(num: Union[int, float], digits: int) -> str:
+        if num == 0:
+            return 0.0
+        num_str = f"{num:.10f}"
+        first_non_zero_index = None
+        for i, char in enumerate(num_str):
+            if char not in ('0', '.'):
+                first_non_zero_index = i
+                break
+    
+        if first_non_zero_index is None:
+            return 0.0
+
+        decimal_position = num_str.find('.')
+        significant_position = first_non_zero_index - decimal_position - 1
+
+        rounded_num = round(num, digits + significant_position)
+
+        rounded_str = f"{rounded_num:.{digits + significant_position}f}"
+
+        if '.' in rounded_str:
+            rounded_str = rounded_str.rstrip('0').rstrip('.')
+    
+        return rounded_str
+    
+    @staticmethod
+    async def get_domain_name(domain_names_path: str, wallet_index: int, total_wallets: int) -> str:
+        try:
+            with open(domain_names_path, 'r') as file:
+                domain_names = [line.strip() for line in file if line.strip()]
+            if len(domain_names) != total_wallets:
+                logger.error(f"Number of domain names ({len(domain_names)}) doesn't match the number of wallets ({total_wallets}).")
+                return False
+            
+            return domain_names[wallet_index]
+    
+        except Exception as e:
+            logger.error(f'Error during reading domain names: {e}.')
+            return False
+        

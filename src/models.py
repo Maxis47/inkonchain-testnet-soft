@@ -1,6 +1,8 @@
 from decimal import Decimal
 from typing import Union
 
+from config import RPCS
+
 
 class TokenAmount:
     Wei: int
@@ -34,7 +36,7 @@ class Network:
 
 ethereum_sepolia = Network(
     name='Sepolia',
-    rpc='https://ethereum-sepolia-rpc.publicnode.com',
+    rpc=RPCS['ethereum_sepolia'],
     chain_id=11155111,
     coin_symbol='ETH',
     explorer='https://sepolia.etherscan.io/'
@@ -42,7 +44,7 @@ ethereum_sepolia = Network(
 
 ink_sepolia = Network(
     name='Ink Sepolia',
-    rpc='https://rpc-qnd-sepolia.inkonchain.com',
+    rpc=RPCS['ink_sepolia'],
     chain_id=763373,
     coin_symbol='ETH',
     explorer='https://explorer-sepolia.inkonchain.com/'

@@ -13,6 +13,7 @@ class Client:
     def __init__(self, private_key: str, network: Network, proxy: str = None):
         self.private_key = private_key
         self.network = network
+        self.proxy = proxy
         if proxy:
             self.w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider(endpoint_uri=self.network.rpc, request_kwargs={"proxy": f"http://{proxy}"}))
         else:
@@ -50,7 +51,7 @@ class Client:
                 tx_params['gas'] = int(estimate_gas * 1.1)
             
             except Exception as e:
-                logger.error(f'{self.wallet_address} | Error estimating gas: {e}')
+                logger.warning(f'{self.wallet_address} | Error estimating gas: {e}')
                 return None
         
         else:
@@ -68,7 +69,7 @@ class Client:
                 tx_params['nonce'] += 1
                 return await self.send_transaction(tx_params=tx_params)
             
-            logger.error(f'{self.wallet_address} | Error sending transaction: {e}')
+            logger.warning(f'{self.wallet_address} | Error sending transaction: {e}')
             return None
 
     async def send_transaction_with_abimethod(self, contract, method: str, *args, value: Optional[int] = None) -> Optional[str]:
@@ -89,11 +90,22 @@ class Client:
             tx_params['gas'] = int(estimate_gas * 1.1) 
         
         except Exception as e:
-            logger.error(f'{self.wallet_address} | Error estimating gas: {e}')
+            logger.warning(f'{self.wallet_address} | Error estimating gas: {e}')
             return None
         
         return await self.send_transaction(tx_params=tx_params)
 
+    async def _register_domain(self, domain_name: str, expiries: int, contract_address: str, abi_path: str, value: int) -> Optional[bool]:
+        contract_abi = await Utils.read_json(abi_path)
+        contract = self.w3.eth.contract(address=AsyncWeb3.to_checksum_address(contract_address), abi=contract_abi)
+
+        args = [[self.wallet_address], [domain_name], [expiries], '0x0000000000000000000000000000000000000000', 0]
+        
+        tx = await self.send_transaction_with_abimethod(contract, 'registerDomains', *args, value=value)
+        if tx:
+            return await self.verif_tx(tx)
+        return None
+    
     async def bridge_eth(self, contract_address: str, value: Union[TokenAmount, int]) -> Optional[bool]:
         bal = await self.get_balance()
         if bal <= value:
@@ -122,7 +134,7 @@ class Client:
             tx_params['gas'] = int(estimate_gas * increase_gas)
         
         except Exception as e:
-            logger.error(f'{self.wallet_address} | Error estimating gas: {e}')
+            logger.warning(f'{self.wallet_address} | Error estimating gas: {e}')
             return None
 
         construct_tx = await contract.constructor(name, symbol).build_transaction(tx_params)
@@ -131,11 +143,9 @@ class Client:
         if tx:
             if await self.verif_tx(tx):
                 tx_receipt = await self.w3.eth.wait_for_transaction_receipt(tx, timeout=200)
-                
-                logger.success(f'{self.wallet_address} | Contract deployment successful: {tx_receipt.contractAddress}')
                 return tx_receipt.contractAddress
             
-            logger.error(f'{self.wallet_address} | Contract deployment failed.')
+            logger.warning(f'{self.wallet_address} | Contract deployment failed.')
             return None
 
     async def mint_nft(self, contract_address: str, abi_path: str) -> Optional[bool]:
@@ -175,13 +185,13 @@ class Client:
             data = await self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=200)
             
             if data.get('status') == 1:
-                logger.success(f'{self.wallet_address} | Transaction was successful: {tx_hash.hex()}. Explorer: {self.network.explorer}')
+                logger.debug(f'{self.wallet_address} | Transaction was successful: {tx_hash.hex()}. Explorer: {self.network.explorer}')
                 return True
             
             else:
-                logger.error(f'{self.wallet_address} | Transaction failed: {data["transactionHash"].hex()}. Explorer: {self.network.explorer}')
+                logger.warning(f'{self.wallet_address} | Transaction failed: {data["transactionHash"].hex()}. Explorer: {self.network.explorer}')
                 return False
         
         except Exception as e:
-            logger.error(f'{self.wallet_address} | Unexpected error in <verif_tx> function: {e}')
+            logger.warning(f'{self.wallet_address} | Unexpected error in <verif_tx> function: {e}')
             return False

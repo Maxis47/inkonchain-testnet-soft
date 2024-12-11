@@ -1,2 +1,21 @@
-bridge_amount = 0.001 # Enter an int or float number representing the amount in ETH, like 0.001, 1, 0.04, etc. Not necessary if you choose random amount.
-delay = (5, 12) # Enter an int numbers representing the range in seconds between the start of tasks for each wallet.
+BRIDGE_PARAMS = {
+    "min_balance": False, 
+    "amount": False, 
+    "percent": (5, 10),
+    "timeout": 120 
+}
+
+RANDOM_CONFIG = {
+    'max_actions': {
+        'erc721_count': (1, 3),
+        'erc20_count': (1, 3),
+    }
+}
+
+RPCS = {
+    "ethereum_sepolia": 'https://ethereum-sepolia-rpc.publicnode.com',
+    "ink_sepolia": 'https://rpc-gel-sepolia.inkonchain.com'
+}
+
+DELAY_BETWEEN_TX = (5, 12)
+DELAY_BETWEEN_ACC = (10, 20)
